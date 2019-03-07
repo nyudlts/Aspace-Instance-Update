@@ -72,43 +72,6 @@ object AspaceClient {
       }
     }
 
-    def getAO(uri: URI, token: String, aspace_url: String): Option[JValue] = {
-      try {
-        val httpGet = new HttpGet(uri + aspace_url)
-        httpGet.addHeader(header, token)
-        val response = client.execute(httpGet)
-        val entity = response.getEntity
-        val content = entity.getContent
-        val data = scala.io.Source.fromInputStream(content).mkString
-        EntityUtils.consume(entity)
-        response.close()
-        Some(parse(data))
-      } catch {
-        case e: Exception => None
-      }
-    }
-
-    def postAO(uri: URI, token: String, aoURI: String, data: String): Option[AspaceResponse] = {
-      try {
-        val httpPost = new HttpPost(uri + aoURI)
-        val postEntity = new StringEntity(data, "UTF-8")
-        httpPost.addHeader(header, token)
-        httpPost.setEntity(postEntity)
-        httpPost.setHeader("Content-type", "application/json; charset=UTF-8")
-        val response = client.execute(httpPost)
-        val code = response.getStatusLine()
-        val responseEntity = response.getEntity
-        val content = parse(scala.io.Source.fromInputStream(responseEntity.getContent).mkString)
-        val statusLine = response.getStatusLine.getStatusCode.toInt
-        EntityUtils.consume(responseEntity)
-        EntityUtils.consume(postEntity)
-        response.close()
-        Some(new AspaceResponse(statusLine, content))
-      } catch {
-        case e: Exception => None
-      }
-    }
-
     def get(httpGet: HttpGet): Option[AspaceResponse] = {
       try {
         val response = client.execute(httpGet)
@@ -121,48 +84,6 @@ object AspaceClient {
         Some(new AspaceResponse(statusCode, parse(data)))
       } catch {
         case e: Exception => None
-      }
-    }
-
-    def postDO(uri: URI, token: String, repId: Int, data: String): Option[AspaceResponse] = {
-      try {
-
-        val httpPost = new HttpPost(uri + s"/repositories/$repId/digital_objects")
-        httpPost.addHeader(header, token)
-        val postEntity = new StringEntity(data, "UTF-8")
-        httpPost.setEntity(postEntity)
-        httpPost.setHeader("Content-type", "application/json; charset=UTF-8")
-        val response = client.execute(httpPost)
-        val responseEntity = response.getEntity
-        val content = parse(scala.io.Source.fromInputStream(responseEntity.getContent).mkString)
-        val statusLine = response.getStatusLine.getStatusCode.toInt
-        EntityUtils.consume(responseEntity)
-        EntityUtils.consume(postEntity)
-        response.close()
-        Some(new AspaceResponse(statusLine, content))
-      } catch {
-        case e: Exception => {
-          None
-        }
-      }
-    }
-
-    def deleteDO(uri: URI, env: String, token: String, doUri: String): Option[AspaceResponse] = {
-      try {
-
-        val httpDelete = new HttpDelete(uri + doUri)
-        httpDelete.addHeader(header, token)
-        val response = client.execute(httpDelete)
-        val responseEntity = response.getEntity
-        val content = parse(scala.io.Source.fromInputStream(responseEntity.getContent).mkString)
-        val statusLine = response.getStatusLine.getStatusCode.toInt
-        EntityUtils.consume(responseEntity)
-        response.close()
-        Some(new AspaceResponse(statusLine, content))
-      } catch {
-        case e: Exception => {
-          None
-        }
       }
     }
 
@@ -190,6 +111,76 @@ object AspaceClient {
           None
         }
       }
+    }
+
+    def getAO(aspace_url: String): Option[AspaceResponse] = {
+      try {
+        val httpGet = new HttpGet(env + aspace_url)
+        httpGet.addHeader(header, token.get)
+        get(httpGet)
+      } catch {
+        case e: Exception => None
+      }
+    }
+
+    def postAO(uri: URI, token: String, aoURI: String, data: String): Option[AspaceResponse] = {
+      try {
+        val httpPost = new HttpPost(uri + aoURI)
+        val postEntity = new StringEntity(data, "UTF-8")
+        httpPost.addHeader(header, token)
+        httpPost.setEntity(postEntity)
+        httpPost.setHeader("Content-type", "application/json; charset=UTF-8")
+        val response = client.execute(httpPost)
+        val code = response.getStatusLine
+        val responseEntity = response.getEntity
+        val content = parse(scala.io.Source.fromInputStream(responseEntity.getContent).mkString)
+        val statusLine = response.getStatusLine.getStatusCode.toInt
+        EntityUtils.consume(responseEntity)
+        EntityUtils.consume(postEntity)
+        response.close()
+        Some(AspaceResponse(statusLine, content))
+      } catch {
+        case e: Exception => None
+      }
+    }
+
+    def postDO(uri: URI, token: String, repId: Int, data: String): Option[AspaceResponse] = {
+      try {
+
+        val httpPost = new HttpPost(uri + s"/repositories/$repId/digital_objects")
+        httpPost.addHeader(header, token)
+        val postEntity = new StringEntity(data, "UTF-8")
+        httpPost.setEntity(postEntity)
+        httpPost.setHeader("Content-type", "application/json; charset=UTF-8")
+        val response = client.execute(httpPost)
+        val responseEntity = response.getEntity
+        val content = parse(scala.io.Source.fromInputStream(responseEntity.getContent).mkString)
+        val statusLine = response.getStatusLine.getStatusCode.toInt
+        EntityUtils.consume(responseEntity)
+        EntityUtils.consume(postEntity)
+        response.close()
+        Some(AspaceResponse(statusLine, content))
+      } catch {
+        case e: Exception => None
+      }
+    }
+
+    def deleteDO(uri: URI, env: String, token: String, doUri: String): Option[AspaceResponse] = {
+      try {
+
+        val httpDelete = new HttpDelete(uri + doUri)
+        httpDelete.addHeader(header, token)
+        val response = client.execute(httpDelete)
+        val responseEntity = response.getEntity
+        val content = parse(scala.io.Source.fromInputStream(responseEntity.getContent).mkString)
+        val statusLine = response.getStatusLine.getStatusCode.toInt
+        EntityUtils.consume(responseEntity)
+        response.close()
+        Some(AspaceResponse(statusLine, content))
+      } catch {
+        case e: Exception => None
+      }
+
     }
 
   }
