@@ -87,9 +87,39 @@ object AspaceClient {
       }
     }
 
+    def getRepository(repositoryId: Int): Option[AspaceResponse] = {
+      try {
+        val httpGet = new HttpGet(env + s"/repositories/$repositoryId")
+        httpGet.addHeader(header, token.get)
+        get(httpGet)
+      } catch {
+        case e: Exception => None
+      }
+    }
+
+    def getRepositories: Option[AspaceResponse] = {
+      try {
+        val httpGet = new HttpGet(env + s"/repositories")
+        httpGet.addHeader(header, token.get)
+        get(httpGet)
+      } catch {
+        case e: Exception => None
+      }
+    }
+
+    def getResource(repositoryId: Int, resourceId: Int): Option[AspaceResponse] = {
+      try {
+        val httpGet = new HttpGet(env + s"/repositories/$repositoryId/resources/$resourceId")
+        httpGet.addHeader(header, token.get)
+        get(httpGet)
+      } catch {
+        case e: Exception => None
+      }
+    }
+
     def getTopContainers(repositoryId: Int, resourceId: Int): Option[AspaceResponse] = {
       try {
-        val httpGet = new HttpGet(env + s"/repositories/$repositoryId/resources/$repositoryId/top_containers")
+        val httpGet = new HttpGet(env + s"/repositories/$repositoryId/resources/$resourceId/top_containers")
         httpGet.addHeader(header, token.get)
         get(httpGet)
       } catch {
