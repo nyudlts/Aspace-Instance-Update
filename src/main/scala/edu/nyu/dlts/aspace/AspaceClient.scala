@@ -8,12 +8,13 @@ import org.apache.http.client.methods.{HttpDelete, HttpGet, HttpPost}
 import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.{CloseableHttpClient, HttpClientBuilder}
 import org.apache.http.util.EntityUtils
-import org.json4s.native.JsonMethods.parse
-import org.json4s.{DefaultFormats, JValue}
+import org.json4s.native.JsonMethods._
+import org.json4s.{DefaultFormats, JValue, JNothing}
 
 import scala.io.Source
 
 case class AspaceResponse(statusCode: Int, json: JValue)
+case class TopContainer(uri: String, indicator: String, barcode: Option[Long])
 
 object AspaceClient {
 
@@ -21,13 +22,14 @@ object AspaceClient {
 
     implicit val formats: DefaultFormats = DefaultFormats
 
+
     val conf: Config = ConfigFactory.load()
     val header = "X-ArchivesSpace-Session"
     val client: CloseableHttpClient = getClient(conf.getInt("client.timeout"))
     val env = new URI(conf.getString("env.dev"))
     val token: Option[String] = getToken(conf.getString("test.username"), conf.getString("test.password"), env)
 
-    def getClient(timeout: Int): CloseableHttpClient = {
+    private def getClient(timeout: Int): CloseableHttpClient = {
       val config = RequestConfig.custom()
         .setConnectTimeout(timeout * 1000)
         .setConnectionRequestTimeout(timeout * 1000)
@@ -35,7 +37,7 @@ object AspaceClient {
       HttpClientBuilder.create().setDefaultRequestConfig(config).build()
     }
 
-    def getServer(uri: URI): Option[JValue] = {
+    private def getServer(uri: URI): Option[JValue] = {
       try {
         val httpGet = new HttpGet(uri)
         val response = client.execute(httpGet)
@@ -50,7 +52,7 @@ object AspaceClient {
       }
     }
 
-    def getToken(user: String, password: String, uri: URI): Option[String] = {
+    private def getToken(user: String, password: String, uri: URI): Option[String] = {
       try {
         val tokenRequest = new HttpPost(uri + s"/users/$user/login?password=$password")
         val response = client.execute(tokenRequest)
@@ -72,7 +74,7 @@ object AspaceClient {
       }
     }
 
-    def get(httpGet: HttpGet): Option[AspaceResponse] = {
+    private def get(httpGet: HttpGet): Option[AspaceResponse] = {
       try {
         val response = client.execute(httpGet)
         val entity = response.getEntity
@@ -87,7 +89,7 @@ object AspaceClient {
       }
     }
 
-    def getRepository(repositoryId: Int): Option[AspaceResponse] = {
+    private def getRepository(repositoryId: Int): Option[AspaceResponse] = {
       try {
         val httpGet = new HttpGet(env + s"/repositories/$repositoryId")
         httpGet.addHeader(header, token.get)
@@ -97,7 +99,7 @@ object AspaceClient {
       }
     }
 
-    def getRepositories: Option[AspaceResponse] = {
+    private def getRepositories: Option[AspaceResponse] = {
       try {
         val httpGet = new HttpGet(env + s"/repositories")
         httpGet.addHeader(header, token.get)
@@ -107,17 +109,7 @@ object AspaceClient {
       }
     }
 
-    def getResource(repositoryId: Int, resourceId: Int): Option[AspaceResponse] = {
-      try {
-        val httpGet = new HttpGet(env + s"/repositories/$repositoryId/resources/$resourceId")
-        httpGet.addHeader(header, token.get)
-        get(httpGet)
-      } catch {
-        case e: Exception => None
-      }
-    }
-
-    def getTopContainers(repositoryId: Int, resourceId: Int): Option[AspaceResponse] = {
+    private def getTopContainers(repositoryId: Int, resourceId: Int): Option[AspaceResponse] = {
       try {
         val httpGet = new HttpGet(env + s"/repositories/$repositoryId/resources/$resourceId/top_containers")
         httpGet.addHeader(header, token.get)
@@ -130,7 +122,7 @@ object AspaceClient {
       }
     }
 
-    def getTopContainer(uri: String): Option[AspaceResponse] = {
+    private def getTopContainer(uri: String): Option[AspaceResponse] = {
       try {
         val httpGet = new HttpGet(env + uri)
         httpGet.addHeader(header, token.get)
@@ -143,17 +135,9 @@ object AspaceClient {
       }
     }
 
-    def getAO(aspace_url: String): Option[AspaceResponse] = {
-      try {
-        val httpGet = new HttpGet(env + aspace_url)
-        httpGet.addHeader(header, token.get)
-        get(httpGet)
-      } catch {
-        case e: Exception => None
-      }
-    }
 
-    def postAO(uri: URI, token: String, aoURI: String, data: String): Option[AspaceResponse] = {
+
+    private def postAO(uri: URI, token: String, aoURI: String, data: String): Option[AspaceResponse] = {
       try {
         val httpPost = new HttpPost(uri + aoURI)
         val postEntity = new StringEntity(data, "UTF-8")
@@ -174,7 +158,7 @@ object AspaceClient {
       }
     }
 
-    def postDO(uri: URI, token: String, repId: Int, data: String): Option[AspaceResponse] = {
+    private def postDO(uri: URI, token: String, repId: Int, data: String): Option[AspaceResponse] = {
       try {
 
         val httpPost = new HttpPost(uri + s"/repositories/$repId/digital_objects")
@@ -195,7 +179,7 @@ object AspaceClient {
       }
     }
 
-    def deleteDO(uri: URI, env: String, token: String, doUri: String): Option[AspaceResponse] = {
+    private def deleteDO(uri: URI, env: String, token: String, doUri: String): Option[AspaceResponse] = {
       try {
 
         val httpDelete = new HttpDelete(uri + doUri)
@@ -213,6 +197,62 @@ object AspaceClient {
 
     }
 
-  }
+    //Public Methods
 
+    def getTopContainerMap(repositoryId: Int, resourceId: Int): Map[String, TopContainer] = {
+      var topContainers = Map[String, TopContainer]()
+      var duplicates = List.empty[JValue]
+      token match {
+        case Some(t) => {
+          getTopContainers(repositoryId, resourceId) match {
+            case Some(response) => {
+              response.json.extract[List[Map[String, String]]].foreach { topContainer =>
+                val uri = topContainer("ref")
+                getTopContainer(uri) match {
+                  case Some(tc) => {
+                    val json = tc.json
+                    val bc = json \ "barcode"
+                    val indicator = (json \ "indicator").extract[String]
+                    val barcode: Option[Long] = if (bc == JNothing) None else Some(bc.extract[String].toLong)
+                    val container = new TopContainer(uri, indicator, barcode)
+                    if (!topContainers.values.toList.contains(container)) {
+                      topContainers = topContainers + (indicator -> container)
+                    } else {
+                      println(s"Ignoring duplicate top container: $container")
+                    }
+                  }
+                  case None => throw new Exception("No Top Container model response from Archivesspace")
+                }
+              }
+            }
+            case None => throw new Exception("No Top Container List response from Archivesspace")
+          }
+        }
+        case None => throw new Exception("No token, check login credentials")
+      }
+
+      topContainers
+    }
+
+    def getResource(repositoryId: Int, resourceId: Int): Option[AspaceResponse] = {
+      try {
+        val httpGet = new HttpGet(env + s"/repositories/$repositoryId/resources/$resourceId")
+        httpGet.addHeader(header, token.get)
+        get(httpGet)
+      } catch {
+        case e: Exception => None
+      }
+    }
+
+    def getAO(aspace_url: String): Option[AspaceResponse] = {
+      try {
+        val httpGet = new HttpGet(env + aspace_url)
+        httpGet.addHeader(header, token.get)
+        get(httpGet)
+      } catch {
+        case e: Exception => None
+      }
+    }
+
+  }
 }
