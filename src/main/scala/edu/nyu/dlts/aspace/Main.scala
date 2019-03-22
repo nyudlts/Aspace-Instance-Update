@@ -34,13 +34,16 @@ object Main extends App with AspaceSupport {
            println("\tUpdating indicator 1")
            val oldIndicator1URI: String = (json \ "instances" \ "sub_container" \ "top_container" \ "ref")(0).extract[String]
            val newIndicator1URI: String = topContainers(r.newIndicator1).uri
-           updateIndicator1(json, oldIndicator1URI, newIndicator1URI)
+           json = updateIndicator1(json, oldIndicator1URI, newIndicator1URI)
          }
 
         if(r.indicator2 != r.newIndicator2) {
           println("\tUpdating indicator 2")
-          updateIndicator2(json, r.indicator2, r.newIndicator2)
+          json = updateIndicator2(json, r.indicator2, r.newIndicator2)
         }
+
+        val post = postAO(uri, compact(render(json)))
+
       }
       case None => println(s"\tNo archival object exists at: $uri for $title")
     }

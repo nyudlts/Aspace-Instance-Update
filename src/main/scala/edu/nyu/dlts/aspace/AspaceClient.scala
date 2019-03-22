@@ -137,11 +137,11 @@ object AspaceClient {
 
 
 
-    private def postAO(uri: URI, token: String, aoURI: String, data: String): Option[AspaceResponse] = {
+    def postAO(aoURI: String, data: String): Option[AspaceResponse] = {
       try {
-        val httpPost = new HttpPost(uri + aoURI)
+        val httpPost = new HttpPost(env + aoURI)
         val postEntity = new StringEntity(data, "UTF-8")
-        httpPost.addHeader(header, token)
+        httpPost.addHeader(header, token.get)
         httpPost.setEntity(postEntity)
         httpPost.setHeader("Content-type", "application/json; charset=UTF-8")
         val response = client.execute(httpPost)
