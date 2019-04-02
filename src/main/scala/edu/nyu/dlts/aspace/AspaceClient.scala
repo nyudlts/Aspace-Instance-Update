@@ -9,12 +9,13 @@ import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.{CloseableHttpClient, HttpClientBuilder}
 import org.apache.http.util.EntityUtils
 import org.json4s.native.JsonMethods._
-import org.json4s.{DefaultFormats, JValue, JNothing}
+import org.json4s.{DefaultFormats, JNothing, JValue}
 
+import scala.collection.immutable.ListMap
 import scala.io.Source
 
 case class AspaceResponse(statusCode: Int, json: JValue)
-case class TopContainer(uri: String, indicator: String, barcode: Option[Long])
+case class TopContainer(uri: String, indicator: String, barcode: Option[Long], kind: Option[String])
 
 object AspaceClient {
 
@@ -212,9 +213,15 @@ object AspaceClient {
                   case Some(tc) => {
                     val json = tc.json
                     val bc = json \ "barcode"
+
+                    val kind = ((json \ "kind") == JNothing) match {
+                      case true => None
+                      case false => Some((json \ "kind").extract[String])
+                    }
+
                     val indicator = (json \ "indicator").extract[String]
                     val barcode: Option[Long] = if (bc == JNothing) None else Some(bc.extract[String].toLong)
-                    val container = new TopContainer(uri, indicator, barcode)
+                    val container = new TopContainer(uri, indicator, barcode, kind)
                     if (!topContainers.values.toList.contains(container)) {
                       topContainers = topContainers + (indicator -> container)
                     } else {
@@ -231,7 +238,7 @@ object AspaceClient {
         case None => throw new Exception("No token, check login credentials")
       }
 
-      topContainers
+      ListMap(topContainers.toSeq.sortBy(_._1):_*)
     }
 
     def getResource(repositoryId: Int, resourceId: Int): Option[AspaceResponse] = {

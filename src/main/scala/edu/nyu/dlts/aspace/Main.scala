@@ -13,45 +13,58 @@ object Main extends App with AspaceSupport {
 
   val repositoryId = 7
   val resourceId = 2698
+
   case class TSVRow(resourceId: String, refId: String, uri: String, indicator1: String, indicator2: String, indicator3: Option[String], title: String, componentId: Option[String], newIndicator1: String, newIndicator2: String)
+
   val resource = getResource(repositoryId, resourceId)
   val topContainers = getTopContainerMap(repositoryId, resourceId)
+
+  topContainers.foreach { t => println(t) }
   println((resource.get.json \ "title").extract[String])
   val workOrder = parseWorkOrder
+  val update = true
+
+  //workOrder.foreach { row => updateAspace(row._2) }
 
 
+  def updateAspace(row: TSVRow): Unit = {
 
-  workOrder.foreach { row =>
 
-    val r: TSVRow = row._2
-    val uri: String = r.uri
-    val title: String = r.title
-    println(title)
-    getAO(uri) match {
-      case Some(ao) => {
-        var json: JValue = ao.json
-         if(r.indicator1 != r.newIndicator1) {
-           println("\tUpdating indicator 1")
-           val oldIndicator1URI: String = (json \ "instances" \ "sub_container" \ "top_container" \ "ref")(0).extract[String]
-           val newIndicator1URI: String = topContainers(r.newIndicator1).uri
-           json = updateIndicator1(json, oldIndicator1URI, newIndicator1URI)
-         }
+      val uri: String = row.uri
+      val title: String = row.title
+      println (title)
+      getAO(uri) match {
+        case Some (ao) => {
+          var json: JValue = ao.json
+          val aspaceIndicator1URI: String = (json \ "instances" \ "sub_container" \ "top_container" \ "ref") (0).extract[String]
+          val aspaceIndicator2: String = (json \ "instances" \ "sub_container" \ "indicator_2")(0).extract[String]
 
-        if(r.indicator2 != r.newIndicator2) {
-          println("\tUpdating indicator 2")
-          json = updateIndicator2(json, r.indicator2, r.newIndicator2)
+          update match {
+            case true => {
+
+              val updateIndicator1URI: String = topContainers(row.newIndicator1).uri
+              val updateInd2 = row.newIndicator2
+
+              if(aspaceIndicator1URI != updateIndicator1URI) { json = updateIndicator1 (json, aspaceIndicator1URI, updateIndicator1URI) }
+              if(aspaceIndicator2 != updateInd2) { json = updateIndicator2(json, aspaceIndicator2, updateInd2) }
+            }
+            case false => {
+              val updateIndicator1URI = topContainers(row.indicator1).uri
+              val updateInd2 = row.indicator2
+              if(aspaceIndicator1URI != updateIndicator1URI) { json = updateIndicator1 (json, aspaceIndicator1URI, updateIndicator1URI) }
+              if(aspaceIndicator2 != updateInd2) { json = updateIndicator2(json, aspaceIndicator2, updateInd2) }
+            }
+
+            val post = postAO (uri, compact (render (json) ) )
+          }
+
         }
-
-        val post = postAO(uri, compact(render(json)))
-
+        case None => println (s"\tNo archival object exists at: $uri for $title")
       }
-      case None => println(s"\tNo archival object exists at: $uri for $title")
-    }
 
   }
 
   def updateIndicator1(ao: JValue, oldTCURI: String, newTCURI: String): JValue ={
-    println(s"\t\tIndicator1: updating $oldTCURI to $newTCURI")
 
     val updatedAo = ao.mapField {
       case ("instances", JArray(head :: tail)) => ("instances", JArray(head.mapField {
