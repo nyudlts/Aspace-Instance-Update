@@ -1,18 +1,45 @@
 package edu.nyu.dlts.aspace
 
+import java.io.File
+import java.net.URI
+
 import edu.nyu.dlts.aspace.AspaceClient.AspaceSupport
+import edu.nyu.dlts.aspace.CLI.CLISupport
 import org.json4s.JsonAST.{JArray, JString, JValue}
 import org.json4s.native.JsonMethods._
+
 import scala.collection.immutable.ListMap
 import scala.io.Source
 
-object Main extends App with AspaceSupport {
+object Main extends App with CLISupport with AspaceSupport {
 
-  val repositoryId = 7
-  val resourceId = 2698
+  case class TSVRow(resourceId: String, refId: String, uri: URI, indicator1: String, indicator2: String, indicator3: Option[String], title: String, componentId: Option[String], newIndicator1: String, newIndicator2: String)
+  case class ResourceRepository(repositoryId: Int, resourceURI: URI, resourceTitle: String)
+  val cliArgs: CLIConf = getCLI(args)
 
-  case class TSVRow(resourceId: String, refId: String, uri: String, indicator1: String, indicator2: String, indicator3: Option[String], title: String, componentId: Option[String], newIndicator1: String, newIndicator2: String)
+  val workOrder: File = new File(cliArgs.source.toOption.get)
+  val workOrders = parseWorkOrder(workOrder)
 
+  val rr: ResourceRepository = getRepResource(workOrders.head._2.uri)
+
+  def parseWorkOrder(wo: File): Map[String, TSVRow] = {
+    var map = Map[String, TSVRow]()
+    Source.fromFile(wo).getLines().drop(1).foreach{ row =>
+      val fields = row.split("\t")
+      val uri = fields(2)
+      val TSVRow = new TSVRow(fields(0), fields(1), new URI(uri), fields(3), fields(4), None, fields(6), None, fields(8), fields(9))
+      map = map + (uri -> TSVRow)
+    }
+    ListMap(map.toSeq.sortBy(_._1):_*)
+  }
+
+  def getRepResource(aoURI: URI): ResourceRepository = {
+    def repositoryId = aoURI.toString.split("/")(2)
+    def resource = getResource(aoURI)
+    new ResourceRepository(1,new URI("example.org"), "blah blah")
+  }
+
+  /*
   val resource = getResource(repositoryId, resourceId)
   val topContainers: Map[String, TopContainer] = getTopContainerMap(repositoryId, resourceId)
 
@@ -108,15 +135,7 @@ object Main extends App with AspaceSupport {
     updatedAo
   }
 
-  def parseWorkOrder: Map[String, TSVRow] = {
-    var map = Map[String, TSVRow]()
-    Source.fromFile("Ghostbusters.tsv").getLines().drop(1).foreach{ row =>
-      val fields = row.split("\t")
-      val uri = fields(2)
-      val TSVRow = new TSVRow(fields(0), fields(1), uri, fields(3), fields(4), None, fields(6), None, fields(8), fields(9))
-      map = map + (uri -> TSVRow)
-    }
-    ListMap(map.toSeq.sortBy(_._1):_*)
-  }
+
+  */
 
 }
