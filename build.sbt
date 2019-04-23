@@ -1,6 +1,6 @@
-name := "BoxShift"
+name := "Aspace-Instance-Update"
 
-version := "0.1"
+version := "0.2b"
 
 scalaVersion := "2.12.8"
 

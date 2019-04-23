@@ -20,9 +20,10 @@ object CLI {
     private def help(): Unit = {
       println("usage: java -jar DOCreator.jar [options]")
       println("  options:")
-      println("    -s, --source, required\tpath to tsv file to be input")
-      println("    -e, --environment, required\taspace environment to be used")
+      println("    -s, --source, required\t/path/to/workorder.tsv")
+      println("    -e, --env, required\t\taspace environment to be used: dev/stage/prod")
       println("    -u, --undo, optional\tundo a previous run")
+      println("    -t, --test, optional\ttest mode does not execute any POSTs")
       println("    -h, --help\tprint this message")
       System.exit(0)
     }
@@ -31,6 +32,7 @@ object CLI {
       val source: ScallopOption[String] = opt[String](required = true)
       val env: ScallopOption[String] = opt[String](required = true)
       val undo: ScallopOption[Boolean] = opt[Boolean](required = false)
+      val test: ScallopOption[Boolean] = opt[Boolean](required = false)
       verify()
     }
 
@@ -43,7 +45,6 @@ object CLI {
         }
       }
     }
-
 
   }
 }

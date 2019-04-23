@@ -1,26 +1,36 @@
 package edu.nyu.dlts.aspace
 
+import edu.nyu.dlts.aspace.CLI.CLISupport
 import java.io.File
 import java.net.URI
-
-import edu.nyu.dlts.aspace.AspaceClient.AspaceSupport
-import edu.nyu.dlts.aspace.CLI.CLISupport
 import org.json4s.JsonAST.{JArray, JString, JValue}
+import org.json4s.{DefaultFormats, JNothing, JValue}
 import org.json4s.native.JsonMethods._
-
 import scala.collection.immutable.ListMap
 import scala.io.Source
 
-object Main extends App with CLISupport with AspaceSupport {
+object Main extends App with CLISupport {
 
   case class TSVRow(resourceId: String, refId: String, uri: URI, indicator1: String, indicator2: String, indicator3: Option[String], title: String, componentId: Option[String], newIndicator1: String, newIndicator2: String)
   case class ResourceRepository(repositoryId: Int, resourceURI: URI, resourceTitle: String)
-  val cliArgs: CLIConf = getCLI(args)
 
-  val workOrder: File = new File(cliArgs.source.toOption.get)
-  val workOrders = parseWorkOrder(workOrder)
+  //initialize values
+  implicit val formats: DefaultFormats = DefaultFormats
+  val cliConf: CLIConf = getCLI(args)
+  val client = new AspaceClient(cliConf.env.toOption.get)
+  val workOrder: File = new File(cliConf.source.toOption.get)
+  val tsvRows = parseWorkOrder(workOrder)
+  val rr: ResourceRepository = getRepResource(tsvRows.head._2.uri)
+  val topContainers = client.getTopContainerMap(rr.resourceURI)
+  val undo = cliConf.undo.toOption.get
+  val test = cliConf.test.toOption.get
 
-  val rr: ResourceRepository = getRepResource(workOrders.head._2.uri)
+  //start the program
+  println("NYU Instance Updater v0.0")
+  println(s"\t* processing ${rr.resourceTitle}")
+
+  //process the Work Order
+  tsvRows.foreach { tsvRow => updateAO(tsvRow._2) }
 
   def parseWorkOrder(wo: File): Map[String, TSVRow] = {
     var map = Map[String, TSVRow]()
@@ -34,40 +44,34 @@ object Main extends App with CLISupport with AspaceSupport {
   }
 
   def getRepResource(aoURI: URI): ResourceRepository = {
-    def repositoryId = aoURI.toString.split("/")(2)
-    def resource = getResource(aoURI)
-    new ResourceRepository(1,new URI("example.org"), "blah blah")
+    val repoId = aoURI.toString.split("/")(2).toInt
+    val ao = client.getAO(aoURI).get.body
+    val resourceURI = new URI((ao \ "resource" \ "ref").extract[String])
+    val resource = client.getResource(resourceURI).get.body
+    val resourceTitle = (resource \ "title").extract[String]
+    new ResourceRepository(repoId, resourceURI, resourceTitle)
   }
 
-  /*
-  val resource = getResource(repositoryId, resourceId)
-  val topContainers: Map[String, TopContainer] = getTopContainerMap(repositoryId, resourceId)
+  def updateAO(row: TSVRow): Unit = {
 
-  println((resource.get.json \ "title").extract[String])
-  val workOrder = parseWorkOrder
-  val update = false
-
-
-  workOrder.foreach { row => updateAspace(row._2) }
-
-  def updateAspace(row: TSVRow): Unit = {
-
-    val uri: String = row.uri
+    val uri = row.uri
     val title: String = row.title
-    println(title)
-    getAO(uri) match {
+    println("\t** " + title)
+
+    client.getAO(uri) match {
       case Some (ao) => {
-        var json: JValue = ao.json
-        val aspaceIndicator1URI: String = (json \ "instances" \ "sub_container" \ "top_container" \ "ref") (0).extract[String]
+        var json: JValue = ao.body
+        val aspaceIndicator1URI = new URI((json \ "instances" \ "sub_container" \ "top_container" \ "ref") (0).extract[String])
         val aspaceIndicator2: String = (json \ "instances" \ "sub_container" \ "indicator_2") (0).extract[String]
         val tsvInd1 = row.indicator1
         val tsvInd2 = row.indicator2
         val tsvNewInd1 = row.newIndicator1
         val tsvNewInd2 = row.newIndicator2
 
-        update match {
-          case true => {
+        undo match {
+          case false => {
             val newUri = topContainers(tsvNewInd1).uri
+            println(s"\t*** $aspaceIndicator1URI")
             if(aspaceIndicator1URI != newUri) {
               json = updateIndicator1(json,aspaceIndicator1URI, newUri)
             }
@@ -77,10 +81,10 @@ object Main extends App with CLISupport with AspaceSupport {
             }
           }
           //logic for undoing an operation
-          case false => {
+          case true => {
             val newUri = topContainers(tsvInd1).uri
             if(aspaceIndicator1URI != newUri) {
-              json = updateIndicator1(json,aspaceIndicator1URI, newUri)
+              json = updateIndicator1(json, aspaceIndicator1URI, newUri)
             }
 
             if(aspaceIndicator2 != tsvInd2) {
@@ -89,7 +93,7 @@ object Main extends App with CLISupport with AspaceSupport {
           }
         }
 
-        postAO(uri, compact(render(json)))
+        if(test == false) { client.postAO(uri, compact(render(json))) }
 
       }
       case None => println (s"\tNo archival object exists at: $uri for $title")
@@ -97,18 +101,19 @@ object Main extends App with CLISupport with AspaceSupport {
 
   }
 
-  def updateIndicator1(ao: JValue, oldTCURI: String, newTCURI: String): JValue ={
+  //json methods
+  def updateIndicator1(ao: JValue, oldTCURI: URI, newTCURI: URI): JValue ={
 
     println("\t* updating top container uri")
     val updatedAo = ao.mapField {
       case ("instances", JArray(head :: tail)) => ("instances", JArray(head.mapField {
-        case ("ref", JString(oldTCURI)) => ("ref", JString(newTCURI))
+        case ("ref", JString(oldTCURI)) => ("ref", JString(newTCURI.toString))
         case otherwise => otherwise
       } :: tail))
       case otherwise => otherwise
     }
 
-    val updatedTCURI = (updatedAo \ "instances" \ "sub_container" \ "top_container" \ "ref")(0).extract[String]
+    val updatedTCURI = new URI((updatedAo \ "instances" \ "sub_container" \ "top_container" \ "ref")(0).extract[String])
     (updatedTCURI == newTCURI) match {
       case true => println(s"\t* success: indicator updated to $newTCURI")
       case false => println(s"\t* failure -- container 2 not updated")
@@ -134,8 +139,5 @@ object Main extends App with CLISupport with AspaceSupport {
     }
     updatedAo
   }
-
-
-  */
 
 }
