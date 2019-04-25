@@ -1,24 +1,18 @@
 app {
-  version = "0.0"
+  version = "0.2b"
 }
 
 client {
-  timeout=50
+  timeout=2000
 }
 
 env {
-  "dev" = "https://"
-  "stage" = "https://"
-  "prod" = ""
-}
-
-repositories {
-  "tamwag" = 2
-  "fales" = 3
-  "archives" = 6
-}
-
-test {
-  "username" = ""
-  "password" = ""
+  "dev" {
+    uri = "your_dev_url"
+    port = 8489
+    login {
+      "username" = "username"
+      "password" = "password"
+    }
+  }
 }

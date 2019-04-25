@@ -11,3 +11,7 @@ libraryDependencies ++= Seq(
   "org.rogach" %% "scallop" % "3.1.3",
   "org.scalatest" % "scalatest_2.12" % "3.0.5" % "test"
 )
+
+assemblyJarName in assembly := "ASInstanceUpdate.jar"
+
+mainClass in assembly := Some("edu.nyu.dlts.aspace.Main")
