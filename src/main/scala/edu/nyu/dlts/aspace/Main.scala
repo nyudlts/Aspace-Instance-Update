@@ -27,7 +27,7 @@ object Main extends App with CLISupport {
 
   //start the program
   println("NYU Instance Updater v0.0")
-  println(s"\t* processing ${rr.resourceTitle}")
+  println(s"  processing ${rr.resourceTitle}")
 
   //process the Work Order
   tsvRows.foreach { tsvRow => updateAO(tsvRow._2) }
@@ -56,7 +56,7 @@ object Main extends App with CLISupport {
 
     val uri = row.uri
     val title: String = row.title
-    println("\t* " + title)
+    println("\t" + title)
 
     client.getAO(uri) match {
       case Some (ao) => {
@@ -104,7 +104,7 @@ object Main extends App with CLISupport {
   //json methods
   def updateIndicator1(ao: JValue, oldTCURI: URI, newTCURI: URI): JValue ={
 
-    println("\t* updating top container uri")
+    println("\t  updating top container uri")
     val updatedAo = ao.mapField {
       case ("instances", JArray(head :: tail)) => ("instances", JArray(head.mapField {
         case ("ref", JString(oldTCURI)) => ("ref", JString(newTCURI.toString))
@@ -115,14 +115,14 @@ object Main extends App with CLISupport {
 
     val updatedTCURI = new URI((updatedAo \ "instances" \ "sub_container" \ "top_container" \ "ref")(0).extract[String])
     (updatedTCURI == newTCURI) match {
-      case true => println(s"\t\t* success: indicator updated to $newTCURI")
-      case false => println(s"\t\t* failure -- container 2 not updated")
+      case true => println(s"\t\t success: indicator updated to $newTCURI")
+      case false => println(s"\t\t failure -- container 2 not updated")
     }
     updatedAo
   }
 
   def updateIndicator2(ao: JValue, oldIndicator2: String, newIndicator2: String): JValue ={
-    println(s"\t* Indicator2: updating $oldIndicator2 to $newIndicator2")
+    println(s"\t  Indicator2: updating $oldIndicator2 to $newIndicator2")
 
     val updatedAo = ao.mapField {
       case ("instances", JArray(head :: tail)) => ("instances", JArray(head.mapField {
@@ -134,8 +134,8 @@ object Main extends App with CLISupport {
 
     val updatedInd2 = (updatedAo \ "instances" \ "sub_container" \ "indicator_2")(0).extract[String]
     (updatedInd2 == newIndicator2) match {
-      case true => println(s"\t\t* success: indicator2 updated to $updatedInd2")
-      case false => println(s"\t\t* failure -- container 2 not updated")
+      case true => println(s"\t\t success: indicator2 updated to $updatedInd2")
+      case false => println(s"\t\t failure -- container 2 not updated")
     }
     updatedAo
   }
