@@ -56,7 +56,7 @@ object Main extends App with CLISupport {
 
     val uri = row.uri
     val title: String = row.title
-    println("\t** " + title)
+    println("\t* " + title)
 
     client.getAO(uri) match {
       case Some (ao) => {
@@ -115,8 +115,8 @@ object Main extends App with CLISupport {
 
     val updatedTCURI = new URI((updatedAo \ "instances" \ "sub_container" \ "top_container" \ "ref")(0).extract[String])
     (updatedTCURI == newTCURI) match {
-      case true => println(s"\t* success: indicator updated to $newTCURI")
-      case false => println(s"\t* failure -- container 2 not updated")
+      case true => println(s"\t\t* success: indicator updated to $newTCURI")
+      case false => println(s"\t\t* failure -- container 2 not updated")
     }
     updatedAo
   }
@@ -134,8 +134,8 @@ object Main extends App with CLISupport {
 
     val updatedInd2 = (updatedAo \ "instances" \ "sub_container" \ "indicator_2")(0).extract[String]
     (updatedInd2 == newIndicator2) match {
-      case true => println(s"\t* success: indicator2 updated to $updatedInd2")
-      case false => println(s"\t* failure -- container 2 not updated")
+      case true => println(s"\t\t* success: indicator2 updated to $updatedInd2")
+      case false => println(s"\t\t* failure -- container 2 not updated")
     }
     updatedAo
   }
