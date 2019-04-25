@@ -71,7 +71,7 @@ object Main extends App with CLISupport {
         undo match {
           case false => {
             val newUri = topContainers(tsvNewInd1).uri
-            println(s"\t*** $aspaceIndicator1URI")
+
             if(aspaceIndicator1URI != newUri) {
               json = updateIndicator1(json,aspaceIndicator1URI, newUri)
             }
