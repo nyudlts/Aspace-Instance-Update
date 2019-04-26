@@ -11,7 +11,8 @@ Build
 ------------------
 * git clone https://github.com/NYU-ACM/Aspace-Instance-Update.git
 * cd Aspace-Instance-Update
-* vi src/main/resources and add your environements' info to the config
+* cp src/main/resources/application.conf_tmplate src/main/resources/application.conf
+* vi src/main/resources/application.cong add your environements' info to the config
 * sbt assembly -- this will generate a jar file in target/scala-2.12
 * cp target/scala-2.12/ASInstanceUpdate.jar .
 
