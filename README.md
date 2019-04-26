@@ -17,11 +17,23 @@ Build
 
 Work-Order Specification
 ------------------------
-forthcoming
+| Resource ID	| Ref ID	| URI	| Container Indicator 1	| Container Indicator 2	| Container Indicator 3	| Title	| Component ID |
+| ---	| ---	| ---| ---	| --- | --- | ---	| --- |
+| TAM.011	| ref14	| /repositories/2/archival_objects/154967	| 1 | 	1 |  | Correspondence	| |
+
+In a spreadsheet editor add two columns to the work order: 'New Container Indicator 1' and 'New Container Indicator 2'. The updater will update the Instances updating the reference to the top container and the child indicator. 
+
+| Resource ID	| Ref ID	| URI	| Container Indicator 1	| Container Indicator 2	| Container Indicator 3	| Title	| Component ID | New Container Indicator 1	| New Container Indicator 2 |
+| ---	| ---	| ---| ---	| --- | --- | ---	| --- | ---	| --- |
+| TAM.011	| ref14	| /repositories/2/archival_objects/154967	| 1 | 	1 |  | Correspondence	| | 2 | 1 |
 
 Run
 ---
 * java -jar AspaceInstanceUpdate.jar -e dev -s my-workorder.tsv
+
+Important Notes
+---------------
+* This program does not create any new top containers, they must exist and attached to a published Archival Object. This is a limitation of the Aspace API
 
 Options
 -------
