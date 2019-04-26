@@ -1,6 +1,6 @@
 name := "Aspace-Instance-Update"
 
-version := "0.2b"
+version := "0.4b"
 
 scalaVersion := "2.12.8"
 

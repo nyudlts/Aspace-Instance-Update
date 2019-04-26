@@ -19,7 +19,8 @@ case class TopContainer(uri: URI, indicator: String, barcode: Option[Long], kind
 class AspaceClient(environment: String) {
 
   implicit val formats: DefaultFormats = DefaultFormats
-  protected val conf: Config = ConfigFactory.load()
+  val clientVersion = "1.0-rc"
+  val conf: Config = ConfigFactory.load()
   protected val header = "X-ArchivesSpace-Session"
   protected val client: CloseableHttpClient = getClient(conf.getInt("client.timeout"))
   protected val env = new URI(conf.getString(s"env.$environment.uri"))
